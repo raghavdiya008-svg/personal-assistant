@@ -1,0 +1,17 @@
+# Project JARVIS
+.env
+data/
+__pycache__/
+.pytest_cache/
+*.pyc
+*.mp3
+*.mp4
+*.wav
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+credentials.json
+token.json
+
