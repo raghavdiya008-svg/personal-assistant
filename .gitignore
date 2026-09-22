@@ -15,3 +15,5 @@ venv/
 credentials.json
 token.json
 
+
+.claude/
