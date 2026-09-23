@@ -1,13 +1,13 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="h-full overflow-hidden">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JARVIS Sovereign Cockpit - AI Assistant Mission Control</title>
-    <!-- Premium Fonts: Syne (Headings), JetBrains Mono (Code/Telemetry), Plus Jakarta Sans (UI) -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>J.A.R.V.I.S — Holographic Mission Control HUD</title>
+    <!-- Futuristic Typography -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=JetBrains+Mono:ital,wght@0,300;0,500;0,700;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.0/lucide.min.js"></script>
     <script>
@@ -16,19 +16,18 @@
             theme: {
                 extend: {
                     colors: {
-                        obsidian: '#07090E',
-                        surface: '#0D111A',
-                        card: 'rgba(17, 24, 39, 0.65)',
-                        cardHover: 'rgba(30, 41, 59, 0.8)',
-                        borderGlass: 'rgba(255, 255, 255, 0.08)',
-                        neonEmerald: '#10B981',
-                        neonCyan: '#06B6D4',
-                        neonPurple: '#8B5CF6',
-                        neonGold: '#F59E0B',
-                        neonRose: '#F43F5E'
+                        hudBg: '#030712',
+                        hudPanel: 'rgba(6, 15, 30, 0.72)',
+                        hudCyan: '#00F0FF',
+                        hudBlue: '#0070F3',
+                        hudNeon: '#00FF9D',
+                        hudAmber: '#FFB800',
+                        hudRose: '#FF0055',
+                        hudBorder: 'rgba(0, 240, 255, 0.22)',
+                        hudBorderGlow: 'rgba(0, 240, 255, 0.55)'
                     },
                     fontFamily: {
-                        syne: ['Syne', 'sans-serif'],
+                        orbitron: ['Orbitron', 'sans-serif'],
                         mono: ['JetBrains Mono', 'monospace'],
                         sans: ['Plus Jakarta Sans', 'sans-serif']
                     }
@@ -37,396 +36,471 @@
         }
     </script>
     <style>
-        body {
-            background-color: #07090E;
-            color: #F8FAFC;
+        * { box-sizing: border-box; user-select: none; }
+        html, body {
+            height: 100vh;
+            width: 100vw;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #030712;
+            color: #E2E8F0;
             font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        /* Holographic Grid Background */
+        .hud-grid-bg {
             background-image: 
-                radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.07) 0px, transparent 45%),
-                radial-gradient(at 100% 0%, rgba(6, 182, 212, 0.07) 0px, transparent 45%),
-                radial-gradient(at 50% 100%, rgba(139, 92, 246, 0.05) 0px, transparent 50%);
-            background-attachment: fixed;
+                radial-gradient(circle at 50% 50%, rgba(0, 240, 255, 0.12) 0%, rgba(3, 7, 18, 0.95) 70%),
+                linear-gradient(rgba(0, 240, 255, 0.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 240, 255, 0.04) 1px, transparent 1px);
+            background-size: 100% 100%, 32px 32px, 32px 32px;
+            background-position: center center;
         }
 
-        .glass-panel {
-            background: rgba(13, 17, 26, 0.75);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+        /* Glass HUD Panel styling */
+        .hud-glass {
+            background: rgba(8, 18, 38, 0.75);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid rgba(0, 240, 255, 0.2);
+            box-shadow: 0 0 25px -4px rgba(0, 240, 255, 0.15), inset 0 0 15px 0 rgba(0, 240, 255, 0.05);
+            position: relative;
         }
 
-        .glass-card {
-            background: rgba(17, 24, 39, 0.55);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        .glass-card:hover {
-            border-color: rgba(16, 185, 129, 0.35);
-            transform: translateY(-2px);
-            box-shadow: 0 8px 24px -4px rgba(16, 185, 129, 0.12);
-        }
-
-        @keyframes pulse-ring {
-            0% { transform: scale(0.95); opacity: 0.8; }
-            50% { transform: scale(1.3); opacity: 0.2; }
-            100% { transform: scale(0.95); opacity: 0.8; }
-        }
-        .live-dot::before {
+        /* Corner Ticks for Sci-Fi HUD Panels */
+        .hud-glass::before {
             content: '';
             position: absolute;
-            width: 100%;
-            height: 100%;
-            border-radius: 50%;
-            background-color: #10B981;
-            animation: pulse-ring 2s infinite ease-in-out;
+            top: -1px; left: -1px; width: 8px; height: 8px;
+            border-top: 2px solid #00F0FF;
+            border-left: 2px solid #00F0FF;
+        }
+        .hud-glass::after {
+            content: '';
+            position: absolute;
+            bottom: -1px; right: -1px; width: 8px; height: 8px;
+            border-bottom: 2px solid #00F0FF;
+            border-right: 2px solid #00F0FF;
         }
 
-        ::-webkit-scrollbar { width: 5px; height: 5px; }
-        ::-webkit-scrollbar-track { background: #07090E; }
-        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #10B981; }
+        .glow-cyan-text {
+            text-shadow: 0 0 10px rgba(0, 240, 255, 0.7), 0 0 20px rgba(0, 240, 255, 0.4);
+        }
+        .glow-neon-text {
+            text-shadow: 0 0 10px rgba(0, 255, 157, 0.7);
+        }
+        .glow-amber-text {
+            text-shadow: 0 0 10px rgba(255, 184, 0, 0.7);
+        }
+
+        /* Animated Arc Reactor Rotation */
+        @keyframes spinSlow {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        @keyframes spinReverse {
+            0% { transform: rotate(360deg); }
+            100% { transform: rotate(0deg); }
+        }
+        @keyframes corePulse {
+            0%, 100% { transform: scale(1); opacity: 0.85; filter: drop-shadow(0 0 25px #00F0FF); }
+            50% { transform: scale(1.1); opacity: 1; filter: drop-shadow(0 0 45px #00F0FF); }
+        }
+        @keyframes scanline {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(1000%); }
+        }
+
+        .animate-spin-slow { animation: spinSlow 30s linear infinite; }
+        .animate-spin-reverse { animation: spinReverse 20s linear infinite; }
+        .animate-spin-fast { animation: spinSlow 12s linear infinite; }
+        .animate-core-pulse { animation: corePulse 3.5s ease-in-out infinite; }
+
+        .scan-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 3px;
+            background: linear-gradient(90deg, transparent, rgba(0, 240, 255, 0.4), transparent);
+            animation: scanline 8s linear infinite;
+            pointer-events: none;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: rgba(3, 7, 18, 0.8); }
+        ::-webkit-scrollbar-thumb { background: rgba(0, 240, 255, 0.3); border-radius: 2px; }
+        ::-webkit-scrollbar-thumb:hover { background: #00F0FF; }
     </style>
 </head>
-<body class="min-h-screen flex flex-col p-4 md:p-6 lg:p-8 space-y-6">
+<body class="hud-grid-bg flex flex-col h-screen w-screen p-3 md:p-4 text-slate-100 overflow-hidden relative select-none">
 
-    <!-- ── Header Bar ─────────────────────────────────────────── -->
-    <header class="glass-panel rounded-2xl p-4 md:px-6 flex flex-wrap items-center justify-between gap-4 border border-borderGlass">
+    <div class="scan-overlay"></div>
+
+    <!-- ── TOP HUD NAVIGATION BAR ───────────────────────────────── -->
+    <header class="h-12 w-full hud-glass rounded-xl px-4 flex items-center justify-between z-20 shrink-0 border-b border-hudBorder">
+        <!-- System Identifier -->
         <div class="flex items-center space-x-3">
-            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-cyan-400 flex items-center justify-center font-syne font-bold text-obsidian text-xl shadow-lg shadow-emerald-500/20">
-                J
+            <div class="w-7 h-7 rounded-lg border border-hudCyan flex items-center justify-center bg-cyan-950/60 shadow-[0_0_12px_rgba(0,240,255,0.4)]">
+                <span class="font-orbitron font-bold text-xs text-hudCyan">J</span>
             </div>
-            <div>
-                <div class="flex items-center space-x-2">
-                    <h1 class="font-syne text-xl font-bold tracking-tight text-white">J.A.R.V.I.S</h1>
-                    <span class="px-2 py-0.5 text-[10px] font-mono font-semibold rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">SOVEREIGN CORE v2.0</span>
-                </div>
-                <p class="text-xs text-slate-400 flex items-center gap-1 font-mono">
-                    <span class="w-2 h-2 rounded-full bg-emerald-400 relative inline-block live-dot"></span>
-                    <span>Zero-Trust Capability Bus Active</span>
-                    <span class="text-slate-600">|</span>
-                    <span id="headerUptime" class="text-slate-400">Uptime: 0s</span>
-                </p>
+            <div class="flex items-baseline space-x-2">
+                <span class="font-orbitron font-extrabold text-sm tracking-wider text-hudCyan glow-cyan-text">J.A.R.V.I.S</span>
+                <span class="font-mono text-[10px] text-slate-400">SOVEREIGN MISSION CONTROL v2.0</span>
             </div>
         </div>
 
-        <!-- Telemetry Pill Badges -->
-        <div class="flex items-center flex-wrap gap-2 text-xs font-mono">
-            <div class="px-3 py-1.5 rounded-lg bg-slate-900/80 border border-slate-800 flex items-center gap-2">
-                <i data-lucide="cpu" class="w-3.5 h-3.5 text-cyan-400"></i>
-                <span class="text-slate-400">Model:</span>
-                <span id="modelTierLabel" class="text-cyan-300 font-semibold">Qwen 27B / Groq</span>
+        <!-- Live Telemetry Tickers -->
+        <div class="hidden md:flex items-center space-x-5 font-mono text-[11px]">
+            <div class="flex items-center space-x-1.5">
+                <span class="w-2 h-2 rounded-full bg-hudNeon animate-ping"></span>
+                <span class="text-slate-400">STATUS:</span>
+                <span class="text-hudNeon font-bold glow-neon-text">OPERATIONAL</span>
             </div>
-            <div class="px-3 py-1.5 rounded-lg bg-slate-900/80 border border-slate-800 flex items-center gap-2">
-                <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-400"></i>
-                <span class="text-slate-400">Capabilities:</span>
-                <span id="capCountBadge" class="text-emerald-300 font-bold">14 Active</span>
+            <div class="flex items-center space-x-1.5 text-slate-400">
+                <span>GATEWAY:</span>
+                <span id="headerModel" class="text-hudCyan font-semibold">Qwen 27B / Groq</span>
             </div>
-            <div class="px-3 py-1.5 rounded-lg bg-slate-900/80 border border-slate-800 flex items-center gap-2">
-                <i data-lucide="key" class="w-3.5 h-3.5 text-amber-400"></i>
-                <span class="text-slate-400">Approvals:</span>
-                <span id="approvalCountBadge" class="text-amber-300 font-bold">0 Pending</span>
+            <div class="flex items-center space-x-1.5 text-slate-400">
+                <span>ACTIVE BUS:</span>
+                <span id="headerCaps" class="text-hudNeon font-bold">14 CAPABILITIES</span>
             </div>
-            <button onclick="fetchTelemetry(); fetchApprovals(); fetchCapabilities();" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition" title="Refresh Telemetry">
-                <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+            <div class="flex items-center space-x-1.5 text-slate-400">
+                <span>HITL GATE:</span>
+                <span id="headerApprovals" class="text-hudAmber font-bold">0 PENDING</span>
+            </div>
+            <div class="flex items-center space-x-1.5 text-slate-400">
+                <span>UPTIME:</span>
+                <span id="headerUptime" class="text-slate-200">0s</span>
+            </div>
+        </div>
+
+        <!-- System Controls -->
+        <div class="flex items-center space-x-2">
+            <button onclick="refreshAll()" class="px-2.5 py-1 rounded bg-cyan-950/70 hover:bg-cyan-900 border border-hudCyan/40 text-hudCyan text-[11px] font-mono flex items-center gap-1 transition shadow-[0_0_8px_rgba(0,240,255,0.2)]">
+                <i data-lucide="refresh-cw" class="w-3 h-3"></i>
+                <span class="hidden sm:inline">SYNC</span>
             </button>
+            <div class="w-2 h-2 rounded-full bg-hudCyan shadow-[0_0_8px_#00F0FF]"></div>
         </div>
     </header>
 
-    <!-- ── Main Grid ──────────────────────────────────────────── -->
-    <main class="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1">
+    <!-- ── MAIN 3-COLUMN HOLOGRAM DECK ──────────────────────────── -->
+    <main class="grid grid-cols-12 gap-3 flex-1 min-h-0 py-2.5 z-10">
 
-        <!-- ── Left Column: AI Interactive Assistant (7 Cols) ─── -->
-        <div class="lg:col-span-7 flex flex-col space-y-6">
+        <!-- ── LEFT HUD: SYSTEM TELEMETRY & STREAM (3 COLS) ─────── -->
+        <section class="col-span-12 lg:col-span-3 flex flex-col space-y-2.5 min-h-0">
             
-            <!-- Chat Cockpit Panel -->
-            <div class="glass-panel rounded-2xl p-5 flex-1 flex flex-col border border-borderGlass min-h-[500px]">
-                <div class="flex items-center justify-between pb-3 border-b border-slate-800/80 mb-4">
-                    <div class="flex items-center space-x-2">
-                        <i data-lucide="terminal" class="w-4 h-4 text-emerald-400"></i>
-                        <h2 class="font-syne font-semibold text-sm tracking-wide text-slate-200">INTERACTIVE ASSISTANT TERMINAL</h2>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <select id="chatTierSelect" class="bg-slate-900 border border-slate-700 text-[11px] font-mono rounded px-2 py-1 text-slate-300 focus:outline-none focus:border-emerald-500">
-                            <option value="auto">Tier: Auto-Route</option>
-                            <option value="reflex">Tier: Reflex (Fast Groq)</option>
-                            <option value="reasoning">Tier: Deep Reasoning (70B)</option>
-                        </select>
-                        <button onclick="clearChat()" class="text-xs text-slate-400 hover:text-slate-200 px-2 py-1 rounded bg-slate-800/50 hover:bg-slate-800 font-mono transition">Clear</button>
-                    </div>
-                </div>
-
-                <!-- Chat Messages Scroll Box -->
-                <div id="chatMessages" class="flex-1 overflow-y-auto space-y-3 pr-2 mb-4 max-h-[440px]">
-                    <div class="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 text-sm">
-                        <div class="flex items-center justify-between mb-1.5 font-mono text-[11px] text-emerald-400">
-                            <span class="flex items-center gap-1"><i data-lucide="bot" class="w-3.5 h-3.5"></i> JARVIS Core</span>
-                            <span class="text-slate-500">TRUST: SYSTEM_POLICY</span>
-                        </div>
-                        <p class="text-slate-200 text-xs leading-relaxed">
-                            Good day, Operator. I am JARVIS v2, your autonomous personal operating system. All 14 capabilities (Desktop Control, Second Brain Vector Search, Telephony, Filesystem Sandbox, Browser Automation, and Cryptographic HITL Gates) are operational. How may I assist you?
-                        </p>
-                    </div>
-                </div>
-
-                <!-- Quick Prompts Bar -->
-                <div class="flex flex-wrap gap-1.5 mb-3 font-mono text-[11px]">
-                    <button onclick="sendQuickPrompt('Take a screenshot of my desktop')" class="px-2.5 py-1 rounded bg-slate-800/70 hover:bg-slate-700 border border-slate-700/60 text-slate-300 transition">📸 Take Screenshot</button>
-                    <button onclick="sendQuickPrompt('Search notes for project roadmap')" class="px-2.5 py-1 rounded bg-slate-800/70 hover:bg-slate-700 border border-slate-700/60 text-slate-300 transition">🔍 Search Notes</button>
-                    <button onclick="sendQuickPrompt('What capabilities are active on the bus?')" class="px-2.5 py-1 rounded bg-slate-800/70 hover:bg-slate-700 border border-slate-700/60 text-slate-300 transition">⚡ Capabilities List</button>
-                    <button onclick="sendQuickPrompt('Analyze our system security policy')" class="px-2.5 py-1 rounded bg-slate-800/70 hover:bg-slate-700 border border-slate-700/60 text-slate-300 transition">🛡️ Security Check</button>
-                </div>
-
-                <!-- Chat Input Form -->
-                <form id="chatForm" onsubmit="handleChatSubmit(event)" class="relative flex items-center">
-                    <input 
-                        type="text" 
-                        id="chatInput"
-                        placeholder="Type a command or ask JARVIS anything... (e.g. 'search notes for contract' or 'take screenshot')"
-                        class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl pl-4 pr-24 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/30 transition shadow-inner font-sans"
-                        autocomplete="off"
-                    />
-                    <div class="absolute right-2 flex items-center space-x-1">
-                        <button type="submit" id="sendBtn" class="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-obsidian font-bold text-xs rounded-lg transition flex items-center gap-1 shadow-md shadow-emerald-500/20">
-                            <span>Send</span>
-                            <i data-lucide="send" class="w-3 h-3"></i>
-                        </button>
-                    </div>
-                </form>
-            </div>
-
-            <!-- Real-time Capability Action Hub -->
-            <div class="glass-panel rounded-2xl p-5 border border-borderGlass">
-                <div class="flex items-center justify-between pb-3 border-b border-slate-800/80 mb-3">
-                    <div class="flex items-center space-x-2">
-                        <i data-lucide="zap" class="w-4 h-4 text-cyan-400"></i>
-                        <h2 class="font-syne font-semibold text-sm tracking-wide text-slate-200">QUICK CAPABILITY LAUNCHER (REAL ACTIONS)</h2>
-                    </div>
-                    <span class="text-[11px] font-mono text-slate-400">Zero-Trust Guarded</span>
-                </div>
-
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5">
-                    <button onclick="invokeQuickCap('desktop.screenshot', {})" class="glass-card p-3 rounded-xl flex flex-col items-start text-left gap-1 group">
-                        <i data-lucide="camera" class="w-4 h-4 text-emerald-400 group-hover:scale-110 transition"></i>
-                        <span class="font-syne font-semibold text-xs text-white">Capture Screen</span>
-                        <span class="text-[10px] font-mono text-slate-400">desktop.screenshot</span>
-                    </button>
-
-                    <button onclick="promptSearchNotes()" class="glass-card p-3 rounded-xl flex flex-col items-start text-left gap-1 group">
-                        <i data-lucide="book-open" class="w-4 h-4 text-cyan-400 group-hover:scale-110 transition"></i>
-                        <span class="font-syne font-semibold text-xs text-white">Second Brain Search</span>
-                        <span class="text-[10px] font-mono text-slate-400">second_brain.search</span>
-                    </button>
-
-                    <button onclick="promptIndexDoc()" class="glass-card p-3 rounded-xl flex flex-col items-start text-left gap-1 group">
-                        <i data-lucide="folder-plus" class="w-4 h-4 text-purple-400 group-hover:scale-110 transition"></i>
-                        <span class="font-syne font-semibold text-xs text-white">Index Document</span>
-                        <span class="text-[10px] font-mono text-slate-400">second_brain.index</span>
-                    </button>
-
-                    <button onclick="promptBrowseUrl()" class="glass-card p-3 rounded-xl flex flex-col items-start text-left gap-1 group">
-                        <i data-lucide="globe" class="w-4 h-4 text-amber-400 group-hover:scale-110 transition"></i>
-                        <span class="font-syne font-semibold text-xs text-white">Safe Web Browse</span>
-                        <span class="text-[10px] font-mono text-slate-400">browser.navigate</span>
-                    </button>
-                </div>
-            </div>
-
-        </div>
-
-        <!-- ── Right Column: Approvals, Telemetry & Stack (5 Cols) ─ -->
-        <div class="lg:col-span-5 flex flex-col space-y-6">
-
-            <!-- Cryptographic HITL Approval Center -->
-            <div class="glass-panel rounded-2xl p-5 border border-borderGlass">
-                <div class="flex items-center justify-between pb-3 border-b border-slate-800/80 mb-3">
-                    <div class="flex items-center space-x-2">
-                        <i data-lucide="key" class="w-4 h-4 text-amber-400"></i>
-                        <h2 class="font-syne font-semibold text-sm tracking-wide text-slate-200">CRYPTOGRAPHIC HITL APPROVALS</h2>
-                    </div>
-                    <span id="pendingBadgeSmall" class="px-2 py-0.5 rounded text-[10px] font-mono bg-amber-500/10 text-amber-400 border border-amber-500/20 font-semibold">0 Pending</span>
-                </div>
-
-                <div id="approvalsList" class="space-y-2.5 max-h-[260px] overflow-y-auto pr-1">
-                    <div class="p-4 rounded-xl bg-slate-900/40 border border-slate-800 text-center text-xs text-slate-500 font-mono">
-                        <i data-lucide="shield-check" class="w-6 h-6 mx-auto mb-1 text-emerald-500/40"></i>
-                        No pending cryptographic approval tickets.<br>High-risk actions (Shell, Telephony, Email) will trigger signed tokens here.
-                    </div>
-                </div>
-            </div>
-
-            <!-- Infrastructure & Container Topology -->
-            <div class="glass-panel rounded-2xl p-5 border border-borderGlass">
-                <div class="flex items-center justify-between pb-3 border-b border-slate-800/80 mb-3">
-                    <div class="flex items-center space-x-2">
-                        <i data-lucide="layers" class="w-4 h-4 text-purple-400"></i>
-                        <h2 class="font-syne font-semibold text-sm tracking-wide text-slate-200">INFRASTRUCTURE & CONTAINERS</h2>
-                    </div>
-                    <span class="text-[10px] font-mono text-emerald-400 flex items-center gap-1">
-                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Live Stack
+            <!-- Module 1: Diagnostic Metrics -->
+            <div class="hud-glass rounded-xl p-3 shrink-0">
+                <div class="flex items-center justify-between border-b border-hudBorder/50 pb-1.5 mb-2">
+                    <span class="font-orbitron font-semibold text-[11px] text-hudCyan flex items-center gap-1.5">
+                        <i data-lucide="activity" class="w-3 h-3 text-hudCyan"></i> DIAGNOSTICS & THREAT SHIELD
                     </span>
+                    <span class="font-mono text-[9px] text-hudNeon">ZERO-TRUST</span>
                 </div>
-
-                <div class="grid grid-cols-2 gap-2 text-xs font-mono">
-                    <div class="p-2.5 rounded-xl bg-slate-900/60 border border-slate-800 flex items-center justify-between">
-                        <span class="text-slate-400">PostgreSQL 16:</span>
-                        <span class="text-emerald-400 font-bold">Port 5432</span>
+                <div class="grid grid-cols-2 gap-2 text-[10px] font-mono">
+                    <div class="p-2 rounded bg-slate-950/60 border border-hudBorder/30">
+                        <div class="text-slate-400">LATENCY BUDGET</div>
+                        <div id="diagLatency" class="text-hudCyan font-bold text-xs">240ms</div>
                     </div>
-                    <div class="p-2.5 rounded-xl bg-slate-900/60 border border-slate-800 flex items-center justify-between">
-                        <span class="text-slate-400">Redis 7 Broker:</span>
-                        <span class="text-emerald-400 font-bold">Port 6379</span>
+                    <div class="p-2 rounded bg-slate-950/60 border border-hudBorder/30">
+                        <div class="text-slate-400">INJECTIONS DEFLECTED</div>
+                        <div id="diagInjections" class="text-hudNeon font-bold text-xs">100% SECURE</div>
                     </div>
-                    <div class="p-2.5 rounded-xl bg-slate-900/60 border border-slate-800 flex items-center justify-between">
-                        <span class="text-slate-400">LiteLLM Proxy:</span>
-                        <span class="text-cyan-400 font-bold">Port 4000</span>
+                    <div class="p-2 rounded bg-slate-950/60 border border-hudBorder/30">
+                        <div class="text-slate-400">MEMORY FACTS DB</div>
+                        <div id="diagMemory" class="text-hudAmber font-bold text-xs">ONLINE (RAG)</div>
                     </div>
-                    <div class="p-2.5 rounded-xl bg-slate-900/60 border border-slate-800 flex items-center justify-between">
-                        <span class="text-slate-400">n8n Engine:</span>
-                        <span class="text-purple-400 font-bold">Port 5678</span>
-                    </div>
-                    <div class="p-2.5 rounded-xl bg-slate-900/60 border border-slate-800 flex items-center justify-between">
-                        <span class="text-slate-400">MinIO Storage:</span>
-                        <span class="text-amber-400 font-bold">Port 9000</span>
-                    </div>
-                    <div class="p-2.5 rounded-xl bg-slate-900/60 border border-slate-800 flex items-center justify-between">
-                        <span class="text-slate-400">Sandbox Isolation:</span>
-                        <span class="text-emerald-400 font-bold">Quarantine</span>
+                    <div class="p-2 rounded bg-slate-950/60 border border-hudBorder/30">
+                        <div class="text-slate-400">BURST POOL</div>
+                        <div class="text-hudCyan font-bold text-xs">FreeLLMAPI</div>
                     </div>
                 </div>
             </div>
 
-            <!-- Active Registered Capabilities Matrix -->
-            <div class="glass-panel rounded-2xl p-5 border border-borderGlass flex-1">
-                <div class="flex items-center justify-between pb-3 border-b border-slate-800/80 mb-3">
-                    <div class="flex items-center space-x-2">
-                        <i data-lucide="cpu" class="w-4 h-4 text-emerald-400"></i>
-                        <h2 class="font-syne font-semibold text-sm tracking-wide text-slate-200">ACTIVE CAPABILITY BUS (14)</h2>
-                    </div>
-                    <span class="text-[10px] font-mono text-slate-400">Risk-Tier Governed</span>
+            <!-- Module 2: Live Cognitive Stream / Log -->
+            <div class="hud-glass rounded-xl p-3 flex-1 flex flex-col min-h-0">
+                <div class="flex items-center justify-between border-b border-hudBorder/50 pb-1.5 mb-2">
+                    <span class="font-orbitron font-semibold text-[11px] text-hudCyan flex items-center gap-1.5">
+                        <i data-lucide="terminal" class="w-3 h-3 text-hudCyan"></i> COGNITIVE LOG STREAM
+                    </span>
+                    <button onclick="document.getElementById('logStream').innerHTML=''" class="text-[9px] font-mono text-slate-400 hover:text-hudCyan">CLEAR</button>
                 </div>
-
-                <div id="capabilitiesList" class="space-y-1.5 max-h-[220px] overflow-y-auto pr-1 text-xs font-mono">
-                    <div class="text-slate-500 text-center py-4">Loading capability matrix...</div>
+                <div id="logStream" class="flex-1 overflow-y-auto space-y-1.5 font-mono text-[10px] pr-1">
+                    <div class="text-slate-400">[00:00:01] System boot verified. Zero-trust broker attached.</div>
+                    <div class="text-hudNeon">[00:00:02] 14 capabilities mapped to sovereign capability bus.</div>
+                    <div class="text-hudCyan">[00:00:03] Cryptographic HMAC approval engine primed.</div>
+                    <div class="text-slate-300">[00:00:04] Holographic Arc Reactor online. Waiting for operator prompt.</div>
                 </div>
             </div>
 
-        </div>
+        </section>
+
+        <!-- ── CENTER HUD: HOLOGRAPHIC ARC REACTOR CORE (6 COLS) ── -->
+        <section class="col-span-12 lg:col-span-6 flex flex-col justify-between items-center relative min-h-0 px-2">
+            
+            <!-- Arc Reactor Hologram Graphic Container -->
+            <div class="relative w-full flex-1 flex items-center justify-center min-h-0 my-1">
+                <!-- Outermost Ticks Ring -->
+                <div class="absolute w-72 h-72 md:w-96 md:h-96 rounded-full border border-hudCyan/20 border-dashed animate-spin-slow pointer-events-none"></div>
+                
+                <!-- Counter-Rotating Segment Ring -->
+                <div class="absolute w-60 h-60 md:w-80 md:h-80 rounded-full border-2 border-transparent border-t-hudCyan/60 border-b-hudCyan/60 border-l-hudNeon/40 animate-spin-reverse pointer-events-none"></div>
+
+                <!-- Radar Angle Ring with Crosshairs -->
+                <div class="absolute w-52 h-52 md:w-64 md:h-64 rounded-full border border-hudCyan/30 flex items-center justify-center pointer-events-none">
+                    <div class="w-full h-px bg-hudCyan/15 absolute"></div>
+                    <div class="h-full w-px bg-hudCyan/15 absolute"></div>
+                </div>
+
+                <!-- Concentric Tech Arc -->
+                <div class="absolute w-40 h-40 md:w-52 md:h-52 rounded-full border-t-2 border-r-2 border-hudCyan animate-spin-fast pointer-events-none shadow-[0_0_15px_rgba(0,240,255,0.3)]"></div>
+
+                <!-- Glowing Holographic Core Sphere -->
+                <div class="relative w-28 h-28 md:w-36 md:h-36 rounded-full bg-gradient-to-tr from-cyan-600 via-blue-500 to-emerald-400 animate-core-pulse flex flex-col items-center justify-center text-center p-2 shadow-[0_0_60px_#00F0FF] cursor-pointer" onclick="triggerCorePulse()">
+                    <div class="absolute inset-1 rounded-full border border-white/40"></div>
+                    <i data-lucide="cpu" class="w-6 h-6 text-white mb-0.5"></i>
+                    <span class="font-orbitron font-extrabold text-[10px] md:text-xs text-white tracking-widest">JARVIS</span>
+                    <span class="font-mono text-[8px] text-cyan-100 font-semibold tracking-tighter">CORE ACTIVE</span>
+                </div>
+
+                <!-- Floating Holographic Data Tags -->
+                <div class="absolute top-4 left-6 hidden sm:block p-1.5 rounded bg-slate-950/80 border border-hudCyan/30 text-[9px] font-mono text-hudCyan">
+                    COORD: 37.7749° N, 122.4194° W<br>
+                    BEAM: DUAL-BAND QWEN/GEMINI
+                </div>
+                <div class="absolute bottom-4 right-6 hidden sm:block p-1.5 rounded bg-slate-950/80 border border-hudCyan/30 text-[9px] font-mono text-hudNeon text-right">
+                    CORE CLOCK: 500+ TOK/S<br>
+                    ENTROPY: NOMINAL 0.02
+                </div>
+            </div>
+
+            <!-- Central Live Dialogue HUD Feed -->
+            <div id="aiDialogueBox" class="w-full hud-glass rounded-xl p-3 mb-2 shrink-0 border border-hudCyan/40 shadow-[0_0_20px_rgba(0,240,255,0.1)]">
+                <div class="flex items-center justify-between text-[10px] font-mono text-hudCyan mb-1">
+                    <span class="flex items-center gap-1 font-bold"><i data-lucide="sparkles" class="w-3 h-3 text-hudCyan"></i> JARVIS SYNTHESIS</span>
+                    <span id="responseMeta" class="text-slate-400">READY</span>
+                </div>
+                <div id="aiResponseText" class="text-xs md:text-sm text-slate-100 font-sans leading-relaxed max-h-20 overflow-y-auto pr-1">
+                    "At your command, Operator. Holographic Core online. Ask me any question, manage your desktop, or query your second brain."
+                </div>
+            </div>
+
+            <!-- Command Input & Execution Deck -->
+            <form onsubmit="handleChatSubmit(event)" class="w-full relative flex items-center shrink-0">
+                <div class="absolute left-3 text-hudCyan pointer-events-none">
+                    <i data-lucide="terminal" class="w-4 h-4"></i>
+                </div>
+                <input 
+                    type="text" 
+                    id="hudInput"
+                    placeholder="Enter command or speak to JARVIS... (e.g. 'take a screenshot' or 'search notes for roadmap')"
+                    class="w-full bg-slate-950/90 border-2 border-hudCyan/60 rounded-xl pl-10 pr-24 py-2.5 text-xs md:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-hudCyan focus:shadow-[0_0_25px_rgba(0,240,255,0.4)] transition font-mono"
+                    autocomplete="off"
+                />
+                <button type="submit" id="hudSendBtn" class="absolute right-1.5 px-3 py-1.5 bg-hudCyan hover:bg-cyan-300 text-slate-950 font-orbitron font-bold text-xs rounded-lg transition flex items-center gap-1 shadow-[0_0_12px_#00F0FF]">
+                    <span>TRANSMIT</span>
+                    <i data-lucide="send" class="w-3 h-3"></i>
+                </button>
+            </form>
+
+        </section>
+
+        <!-- ── RIGHT HUD: CAPABILITIES & HITL APPROVALS (3 COLS) ── -->
+        <section class="col-span-12 lg:col-span-3 flex flex-col space-y-2.5 min-h-0">
+
+            <!-- Module 1: Cryptographic HITL Approval Tickets -->
+            <div class="hud-glass rounded-xl p-3 shrink-0">
+                <div class="flex items-center justify-between border-b border-hudBorder/50 pb-1.5 mb-2">
+                    <span class="font-orbitron font-semibold text-[11px] text-hudAmber flex items-center gap-1.5">
+                        <i data-lucide="key" class="w-3 h-3 text-hudAmber"></i> CRYPTOGRAPHIC HITL GATE
+                    </span>
+                    <span id="pendingCountBadge" class="px-1.5 py-0.2 rounded text-[9px] font-mono bg-amber-500/20 text-hudAmber border border-amber-500/30">0 PENDING</span>
+                </div>
+                <div id="approvalsDeck" class="space-y-2 max-h-36 overflow-y-auto pr-1">
+                    <div class="p-2.5 rounded bg-slate-950/60 border border-slate-800 text-center text-[10px] text-slate-400 font-mono">
+                        No pending signature tokens.<br>Critical operations request HMAC authorization here.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Module 2: Quick Capability Dispatchers -->
+            <div class="hud-glass rounded-xl p-3 shrink-0">
+                <div class="border-b border-hudBorder/50 pb-1.5 mb-2 font-orbitron font-semibold text-[11px] text-hudCyan flex items-center gap-1.5">
+                    <i data-lucide="zap" class="w-3 h-3 text-hudCyan"></i> CAPABILITY LAUNCHPAD
+                </div>
+                <div class="grid grid-cols-2 gap-1.5">
+                    <button onclick="invokeQuickCap('desktop.screenshot', {})" class="p-2 rounded bg-slate-950/70 hover:bg-cyan-950/60 border border-hudBorder/40 text-left transition group">
+                        <div class="flex items-center justify-between text-hudCyan mb-0.5">
+                            <span class="font-orbitron text-[10px] font-bold">SCREENSHOT</span>
+                            <i data-lucide="camera" class="w-3 h-3"></i>
+                        </div>
+                        <div class="text-[8px] font-mono text-slate-400">desktop.screenshot</div>
+                    </button>
+                    <button onclick="promptSearchNotes()" class="p-2 rounded bg-slate-950/70 hover:bg-cyan-950/60 border border-hudBorder/40 text-left transition group">
+                        <div class="flex items-center justify-between text-hudNeon mb-0.5">
+                            <span class="font-orbitron text-[10px] font-bold">2ND BRAIN</span>
+                            <i data-lucide="book-open" class="w-3 h-3"></i>
+                        </div>
+                        <div class="text-[8px] font-mono text-slate-400">second_brain.search</div>
+                    </button>
+                    <button onclick="promptIndexDoc()" class="p-2 rounded bg-slate-950/70 hover:bg-cyan-950/60 border border-hudBorder/40 text-left transition group">
+                        <div class="flex items-center justify-between text-hudAmber mb-0.5">
+                            <span class="font-orbitron text-[10px] font-bold">INDEX DOC</span>
+                            <i data-lucide="folder-plus" class="w-3 h-3"></i>
+                        </div>
+                        <div class="text-[8px] font-mono text-slate-400">second_brain.index</div>
+                    </button>
+                    <button onclick="promptBrowseUrl()" class="p-2 rounded bg-slate-950/70 hover:bg-cyan-950/60 border border-hudBorder/40 text-left transition group">
+                        <div class="flex items-center justify-between text-cyan-300 mb-0.5">
+                            <span class="font-orbitron text-[10px] font-bold">WEB FETCH</span>
+                            <i data-lucide="globe" class="w-3 h-3"></i>
+                        </div>
+                        <div class="text-[8px] font-mono text-slate-400">browser.navigate</div>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Module 3: Active Registered Capabilities Matrix (14) -->
+            <div class="hud-glass rounded-xl p-3 flex-1 flex flex-col min-h-0">
+                <div class="flex items-center justify-between border-b border-hudBorder/50 pb-1.5 mb-2">
+                    <span class="font-orbitron font-semibold text-[11px] text-hudCyan flex items-center gap-1.5">
+                        <i data-lucide="layers" class="w-3 h-3 text-hudCyan"></i> CAPABILITY BUS (14)
+                    </span>
+                    <span class="font-mono text-[9px] text-slate-400">ACTIVE</span>
+                </div>
+                <div id="capabilitiesMatrix" class="flex-1 overflow-y-auto space-y-1 font-mono text-[9px] pr-1">
+                    <div class="text-slate-500 text-center py-2">Loading active capability bus...</div>
+                </div>
+            </div>
+
+        </section>
 
     </main>
 
-    <!-- ── Execution / Output Modal Toast ───────────────────────── -->
-    <div id="actionModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="glass-panel rounded-2xl p-6 max-w-lg w-full border border-slate-700 shadow-2xl">
-            <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
-                <h3 id="modalTitle" class="font-syne font-bold text-sm text-emerald-400">CAPABILITY OUTPUT</h3>
+    <!-- ── FOOTER DOCK (SYSTEM CONTAINERS & TOKENS) ─────────────── -->
+    <footer class="h-9 w-full hud-glass rounded-xl px-4 flex items-center justify-between text-[10px] font-mono shrink-0 border-t border-hudBorder text-slate-400">
+        <div class="flex items-center space-x-4">
+            <span class="text-hudCyan flex items-center gap-1"><i data-lucide="server" class="w-3 h-3"></i> DOCKER TOPOLOGY:</span>
+            <span>POSTGRES:5432 <span class="text-hudNeon">[OK]</span></span>
+            <span>REDIS:6379 <span class="text-hudNeon">[OK]</span></span>
+            <span>LITELLM:4000 <span class="text-hudCyan">[OK]</span></span>
+            <span>MINIO:9000 <span class="text-hudAmber">[OK]</span></span>
+        </div>
+        <div class="flex items-center space-x-3">
+            <span class="text-slate-500">ENCRYPTION: FERNET AUTHENTICATED</span>
+            <span class="text-hudCyan">SECURITY: STRICT BROKER</span>
+        </div>
+    </footer>
+
+    <!-- ── MODAL OUTPUT TOAST ───────────────────────────────────── -->
+    <div id="actionModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="hud-glass rounded-2xl p-5 max-w-lg w-full border border-hudCyan shadow-[0_0_40px_rgba(0,240,255,0.3)]">
+            <div class="flex items-center justify-between pb-2 border-b border-hudBorder mb-3">
+                <h3 id="modalTitle" class="font-orbitron font-bold text-xs text-hudCyan glow-cyan-text">CAPABILITY TRANSMISSION</h3>
                 <button onclick="closeModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
             </div>
-            <pre id="modalContent" class="bg-slate-950 p-4 rounded-xl font-mono text-xs text-slate-300 overflow-x-auto max-h-[300px] border border-slate-800/80"></pre>
-            <div class="mt-4 flex justify-end">
-                <button onclick="closeModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-mono rounded-lg">Close</button>
+            <pre id="modalContent" class="bg-slate-950/90 p-3 rounded-lg font-mono text-xs text-cyan-200 overflow-x-auto max-h-60 border border-hudBorder/50"></pre>
+            <div class="mt-3 flex justify-end">
+                <button onclick="closeModal()" class="px-3 py-1 bg-hudCyan text-slate-950 font-orbitron font-bold text-xs rounded transition hover:bg-cyan-300">ACKNOWLEDGE</button>
             </div>
         </div>
     </div>
 
-    <!-- ── Client Scripts ───────────────────────────────────────── -->
+    <!-- ── JAVASCRIPT COCKPIT CONTROLLER ────────────────────────── -->
     <script>
-        // Init Lucide icons
         lucide.createIcons();
 
-        // Telemetry Poller
+        function addLog(text, colorClass = "text-slate-300") {
+            const stream = document.getElementById('logStream');
+            const d = new Date();
+            const timeStr = `[${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}]`;
+            const div = document.createElement('div');
+            div.className = `${colorClass}`;
+            div.textContent = `${timeStr} ${text}`;
+            stream.appendChild(div);
+            stream.scrollTop = stream.scrollHeight;
+        }
+
         async function fetchTelemetry() {
             try {
                 const res = await fetch('/api/telemetry');
                 const data = await res.json();
-                document.getElementById('headerUptime').textContent = `Uptime: ${data.uptime_seconds}s`;
-                document.getElementById('capCountBadge').textContent = `${data.capabilities_registered} Active`;
-                document.getElementById('approvalCountBadge').textContent = `${data.pending_approvals} Pending`;
+                document.getElementById('headerUptime').textContent = `${data.uptime_seconds}s`;
+                document.getElementById('headerCaps').textContent = `${data.capabilities_registered} ACTIVE`;
+                document.getElementById('headerApprovals').textContent = `${data.pending_approvals} PENDING`;
+                document.getElementById('headerModel').textContent = data.primary_model || "Qwen 27B / Groq";
             } catch (e) {
-                console.warn("Telemetry fetch error:", e);
+                console.warn("Telemetry poll error:", e);
             }
         }
 
-        // Capabilities Loader
         async function fetchCapabilities() {
             try {
                 const res = await fetch('/api/capabilities');
                 const data = await res.json();
-                const container = document.getElementById('capabilitiesList');
+                const container = document.getElementById('capabilitiesMatrix');
                 container.innerHTML = '';
 
                 for (const [name, info] of Object.entries(data)) {
-                    let riskColor = 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
-                    if (info.risk_level === 'MEDIUM') riskColor = 'text-cyan-400 bg-cyan-500/10 border-cyan-500/20';
-                    if (info.risk_level === 'HIGH') riskColor = 'text-amber-400 bg-amber-500/10 border-amber-500/20';
-                    if (info.risk_level === 'CRITICAL') riskColor = 'text-rose-400 bg-rose-500/10 border-rose-500/20';
+                    let riskBadge = '<span class="text-hudNeon font-bold">LOW</span>';
+                    if (info.risk_level === 'MEDIUM') riskBadge = '<span class="text-hudCyan font-bold">MED</span>';
+                    if (info.risk_level === 'HIGH') riskBadge = '<span class="text-hudAmber font-bold">HIGH</span>';
+                    if (info.risk_level === 'CRITICAL') riskBadge = '<span class="text-hudRose font-bold">CRIT</span>';
 
-                    const item = document.createElement('div');
-                    item.className = 'p-2 rounded-lg bg-slate-900/60 border border-slate-800/80 flex items-center justify-between hover:bg-slate-800/60 transition';
-                    item.innerHTML = `
-                        <div class="flex items-center space-x-2">
-                            <span class="w-1.5 h-1.5 rounded-full bg-slate-500"></span>
-                            <span class="text-slate-300 font-medium">${name}</span>
-                        </div>
-                        <div class="flex items-center gap-1.5">
-                            <span class="px-1.5 py-0.5 rounded text-[9px] border font-bold ${riskColor}">${info.risk_level}</span>
-                            <span class="text-[9px] text-slate-500">${info.rate_limit_per_min}/m</span>
+                    const row = document.createElement('div');
+                    row.className = 'p-1.5 rounded bg-slate-950/70 border border-hudBorder/20 flex items-center justify-between hover:border-hudCyan/50 transition';
+                    row.innerHTML = `
+                        <span class="text-slate-300 truncate">${name}</span>
+                        <div class="flex items-center gap-2">
+                            ${riskBadge}
+                            <span class="text-slate-500">${info.rate_limit_per_min}/m</span>
                         </div>
                     `;
-                    container.appendChild(item);
+                    container.appendChild(row);
                 }
             } catch (e) {
-                console.warn("Capabilities fetch error:", e);
+                console.warn("Capabilities poll error:", e);
             }
         }
 
-        // Approvals Loader
         async function fetchApprovals() {
             try {
                 const res = await fetch('/api/approvals');
                 const data = await res.json();
-                const container = document.getElementById('approvalsList');
-                document.getElementById('pendingBadgeSmall').textContent = `${data.count} Pending`;
+                const deck = document.getElementById('approvalsDeck');
+                document.getElementById('pendingCountBadge').textContent = `${data.count} PENDING`;
 
                 if (data.count === 0) {
-                    container.innerHTML = `
-                        <div class="p-4 rounded-xl bg-slate-900/40 border border-slate-800 text-center text-xs text-slate-500 font-mono">
-                            <i data-lucide="shield-check" class="w-6 h-6 mx-auto mb-1 text-emerald-500/40"></i>
-                            No pending cryptographic approval tickets.<br>High-risk actions (Shell, Telephony, Email) will trigger signed tokens here.
+                    deck.innerHTML = `
+                        <div class="p-2.5 rounded bg-slate-950/60 border border-slate-800 text-center text-[10px] text-slate-400 font-mono">
+                            No pending signature tokens.<br>Critical operations request HMAC authorization here.
                         </div>
                     `;
-                    lucide.createIcons();
                     return;
                 }
 
-                container.innerHTML = '';
+                deck.innerHTML = '';
                 for (const [tid, ticket] of Object.entries(data.pending_tickets)) {
                     const card = document.createElement('div');
-                    card.className = 'p-3 rounded-xl bg-slate-900/80 border border-amber-500/30 space-y-2';
+                    card.className = 'p-2 rounded bg-slate-950 border border-hudAmber space-y-1.5';
                     card.innerHTML = `
-                        <div class="flex items-center justify-between text-xs font-mono">
-                            <span class="text-amber-400 font-bold">[${ticket.action}]</span>
+                        <div class="flex items-center justify-between text-[10px] font-mono">
+                            <span class="text-hudAmber font-bold">[${ticket.action}]</span>
                             <span class="text-slate-500">${ticket.ticket_id}</span>
                         </div>
-                        <div class="text-[11px] font-mono text-slate-400 bg-slate-950 p-2 rounded border border-slate-800">
-                            Hash: ${ticket.params_hash.substring(0, 16)}...<br>
-                            Params: ${JSON.stringify(ticket.parameters)}
+                        <div class="text-[9px] font-mono text-slate-400 bg-slate-900 p-1.5 rounded border border-slate-800 truncate">
+                            Hash: ${ticket.params_hash.substring(0, 16)}...
                         </div>
-                        <div class="flex items-center justify-end gap-2 pt-1">
-                            <button onclick="approveTicket('${ticket.ticket_id}')" class="px-3 py-1 rounded bg-emerald-500 hover:bg-emerald-400 text-obsidian font-bold text-xs font-mono transition shadow-sm">
-                                Approve (Sign)
-                            </button>
-                            <button onclick="rejectTicket('${ticket.ticket_id}')" class="px-3 py-1 rounded bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 border border-rose-500/30 text-xs font-mono transition">
-                                Reject
-                            </button>
+                        <div class="flex items-center justify-end gap-1.5">
+                            <button onclick="approveTicket('${ticket.ticket_id}')" class="px-2 py-0.5 rounded bg-hudNeon text-slate-950 font-bold text-[9px] font-mono">Approve (HMAC)</button>
+                            <button onclick="rejectTicket('${ticket.ticket_id}')" class="px-2 py-0.5 rounded bg-hudRose/20 text-hudRose border border-hudRose/40 text-[9px] font-mono">Reject</button>
                         </div>
                     `;
-                    container.appendChild(card);
+                    deck.appendChild(card);
                 }
             } catch (e) {
-                console.warn("Approvals fetch error:", e);
+                console.warn("Approvals poll error:", e);
             }
         }
 
@@ -435,11 +509,12 @@
                 const res = await fetch(`/api/approvals/${ticketId}/approve`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({operator_id: 'web_cockpit_user'})
+                    body: JSON.stringify({operator_id: 'holographic_deck'})
                 });
                 const data = await res.json();
+                addLog(`Cryptographic signature granted for ticket ${ticketId}`, "text-hudNeon");
                 fetchApprovals();
-                showModal("APPROVAL GRANTED", JSON.stringify(data, null, 2));
+                showModal("HMAC TOKEN SIGNED", JSON.stringify(data, null, 2));
             } catch (e) {
                 alert("Approval failed: " + e);
             }
@@ -450,76 +525,52 @@
                 const res = await fetch(`/api/approvals/${ticketId}/reject`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({operator_id: 'web_cockpit_user'})
+                    body: JSON.stringify({operator_id: 'holographic_deck'})
                 });
                 const data = await res.json();
+                addLog(`Ticket ${ticketId} rejected by operator.`, "text-hudRose");
                 fetchApprovals();
-                showModal("TICKET REJECTED", JSON.stringify(data, null, 2));
+                showModal("TICKET VOIDED", JSON.stringify(data, null, 2));
             } catch (e) {
                 alert("Rejection failed: " + e);
             }
         }
 
-        // Chat Handler
         async function handleChatSubmit(e) {
             e.preventDefault();
-            const input = document.getElementById('chatInput');
+            const input = document.getElementById('hudInput');
             const message = input.value.trim();
             if (!message) return;
 
             input.value = '';
-            appendMessage('User', message, 'text-cyan-400', 'OPERATOR_COMMAND');
+            addLog(`Operator: ${message}`, "text-hudCyan");
 
-            const tier = document.getElementById('chatTierSelect').value;
-            const sendBtn = document.getElementById('sendBtn');
+            const sendBtn = document.getElementById('hudSendBtn');
             sendBtn.disabled = true;
-            sendBtn.innerHTML = '<span>...</span>';
+            document.getElementById('responseMeta').textContent = "PROCESSING...";
 
             try {
                 const res = await fetch('/api/chat', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({message, tier, agent_id: 'cockpit_operator'})
+                    body: JSON.stringify({message, tier: 'auto', agent_id: 'hologram_operator'})
                 });
                 const data = await res.json();
-                appendMessage('JARVIS', data.response, 'text-emerald-400', `${data.trust_level} · ${data.latency_ms || 0}ms`);
+                document.getElementById('aiResponseText').textContent = `"${data.response}"`;
+                document.getElementById('responseMeta').textContent = `${data.trust_level} · ${data.latency_ms || 0}ms`;
+                document.getElementById('diagLatency').textContent = `${data.latency_ms || 0}ms`;
+                addLog(`JARVIS: ${data.response.substring(0, 80)}...`, "text-slate-200");
                 fetchApprovals();
             } catch (err) {
-                appendMessage('JARVIS', `[Error: ${err.message}]`, 'text-rose-400', 'ERROR');
+                document.getElementById('aiResponseText').textContent = `[Transmission Error: ${err.message}]`;
+                addLog(`Error: ${err.message}`, "text-hudRose");
             } finally {
                 sendBtn.disabled = false;
-                sendBtn.innerHTML = '<span>Send</span><i data-lucide="send" class="w-3 h-3"></i>';
-                lucide.createIcons();
             }
         }
 
-        function appendMessage(sender, text, senderColor, meta) {
-            const container = document.getElementById('chatMessages');
-            const msg = document.createElement('div');
-            msg.className = 'p-3.5 rounded-xl bg-slate-900/70 border border-slate-800 text-sm space-y-1';
-            msg.innerHTML = `
-                <div class="flex items-center justify-between font-mono text-[11px] ${senderColor}">
-                    <span class="font-bold flex items-center gap-1">${sender === 'User' ? '<i data-lucide="user" class="w-3 h-3"></i> Operator' : '<i data-lucide="bot" class="w-3.5 h-3.5"></i> JARVIS'}</span>
-                    <span class="text-slate-500">${meta || ''}</span>
-                </div>
-                <div class="text-slate-200 text-xs leading-relaxed whitespace-pre-wrap">${escapeHtml(text)}</div>
-            `;
-            container.appendChild(msg);
-            container.scrollTop = container.scrollHeight;
-            lucide.createIcons();
-        }
-
-        function sendQuickPrompt(prompt) {
-            document.getElementById('chatInput').value = prompt;
-            document.getElementById('chatForm').dispatchEvent(new Event('submit'));
-        }
-
-        function clearChat() {
-            document.getElementById('chatMessages').innerHTML = '';
-        }
-
-        // Direct Capability Invocations
         async function invokeQuickCap(name, params) {
+            addLog(`Dispatching capability: ${name}...`, "text-hudAmber");
             try {
                 const res = await fetch(`/api/capabilities/${name}/invoke`, {
                     method: 'POST',
@@ -527,26 +578,31 @@
                     body: JSON.stringify({parameters: params})
                 });
                 const data = await res.json();
+                addLog(`Capability ${name} completed.`, "text-hudNeon");
                 fetchApprovals();
-                showModal(`CAPABILITY: ${name}`, JSON.stringify(data, null, 2));
+                showModal(`EXECUTION: ${name}`, JSON.stringify(data, null, 2));
             } catch (e) {
                 showModal(`ERROR: ${name}`, e.message);
             }
         }
 
         function promptSearchNotes() {
-            const q = prompt("Enter search keywords for Second Brain:", "roadmap");
+            const q = prompt("Enter search query for Second Brain:", "roadmap");
             if (q) invokeQuickCap('second_brain.search', {search_text: q});
         }
 
         function promptIndexDoc() {
-            const path = prompt("Enter document path to index (e.g. data/notes.txt):", "data/sample_doc.txt");
+            const path = prompt("Enter path of document to index (e.g. data/sample.txt):", "data/sample.txt");
             if (path) invokeQuickCap('second_brain.index', {file_path: path});
         }
 
         function promptBrowseUrl() {
-            const url = prompt("Enter external URL to navigate & summarize:", "https://news.ycombinator.com");
+            const url = prompt("Enter URL to browse safely:", "https://news.ycombinator.com");
             if (url) invokeQuickCap('browser.navigate', {url: url});
+        }
+
+        function triggerCorePulse() {
+            addLog("Arc Reactor core pinged by operator.", "text-hudCyan");
         }
 
         function showModal(title, content) {
@@ -559,14 +615,15 @@
             document.getElementById('actionModal').classList.add('hidden');
         }
 
-        function escapeHtml(str) {
-            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        function refreshAll() {
+            fetchTelemetry();
+            fetchCapabilities();
+            fetchApprovals();
+            addLog("Telemetry and capability matrix synced.", "text-hudCyan");
         }
 
-        // Periodic poller
-        fetchTelemetry();
-        fetchCapabilities();
-        fetchApprovals();
+        // Periodic Pollers
+        refreshAll();
         setInterval(fetchTelemetry, 3000);
         setInterval(fetchApprovals, 4000);
     </script>

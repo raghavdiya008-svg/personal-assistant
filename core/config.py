@@ -41,8 +41,8 @@ class Config:
 
     # Verified Working Frontier Models
     FAST_MODEL: str = os.getenv("FAST_MODEL", "qwen/qwen3.8-27b")              # Groq high-speed (27B params, 500+ tok/s)
-    REASONING_MODEL: str = os.getenv("REASONING_MODEL", "llama-3.3-70b-versatile")  # Groq 70B deep reasoning & strategy
-    MULTIMODAL_MODEL: str = os.getenv("MULTIMODAL_MODEL", "gemini-2.5-flash")      # Google AI Studio multimodal
+    REASONING_MODEL: str = os.getenv("REASONING_MODEL", "qwen/qwen3.8-27b")     # Groq 27B reasoning & strategy
+    MULTIMODAL_MODEL: str = os.getenv("MULTIMODAL_MODEL", "gemini-3.6-flash")      # Google AI Studio multimodal
 
     # Gateway & Security Keys
     APPROVAL_SECRET_KEY: str = os.getenv("APPROVAL_SECRET_KEY", "jarvis_v2_sovereign_secret_key")

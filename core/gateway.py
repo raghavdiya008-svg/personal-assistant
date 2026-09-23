@@ -89,7 +89,7 @@ class LLMGateway:
                             {"role": "system", "content": system_prompt},
                             {"role": "user", "content": prompt},
                         ],
-                        max_tokens=1024,
+                        max_tokens=500,
                     )
                     return res.choices[0].message.content or ""
                 out = await asyncio.to_thread(_call)
