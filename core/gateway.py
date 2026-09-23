@@ -115,6 +115,30 @@ class LLMGateway:
             return None
         return None
 
+    def _retrieve_memory_context(self, prompt: str) -> str:
+        """Query local database facts and second brain to ground the model."""
+        memory_snippets = []
+        try:
+            from core.memory import retrieve_relevant_facts
+            facts = retrieve_relevant_facts(prompt, limit=3)
+            for f in facts:
+                memory_snippets.append(f"• Fact [{f['category']}]: {f['key']} -> {f['value']}")
+        except Exception:
+            pass
+
+        try:
+            from core.second_brain import second_brain
+            res = second_brain.query(prompt, top_k=2)
+            results = res.content.get("results", []) if hasattr(res, "content") else []
+            for r in results:
+                memory_snippets.append(f"• Document [{r.get('filename')}]: {r.get('content')[:180]}...")
+        except Exception:
+            pass
+
+        if memory_snippets:
+            return "\n\n[LOCAL MEMORY & KNOWLEDGE CONTEXT]:\n" + "\n".join(memory_snippets)
+        return ""
+
     async def complete(
         self,
         prompt: str,
@@ -127,6 +151,7 @@ class LLMGateway:
           Layer 1: LiteLLM Proxy
           Layer 2: Local Cognitive Brain (Groq 8B/70B / Ollama / Gemini)
           Layer 3: FreeLLMAPI Multiplexer Burst Pool
+        Automatically enriched with local memory grounding context.
         """
         start_time = time.time()
 
@@ -138,7 +163,12 @@ class LLMGateway:
             actual_tier = tier
 
         timeout_budget = timeout or (5.0 if actual_tier == "reflex" else 15.0)
-        sys_msg = system_prompt or "You are JARVIS, an autonomous sovereign executive assistant."
+        base_sys = system_prompt or "You are JARVIS, an autonomous sovereign executive assistant."
+        
+        # Grounding with Local Memory Database & Second Brain
+        memory_ctx = self._retrieve_memory_context(prompt)
+        sys_msg = f"{base_sys}{memory_ctx}"
+
         messages = [
             {"role": "system", "content": sys_msg},
             {"role": "user", "content": prompt},

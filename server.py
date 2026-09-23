@@ -89,8 +89,22 @@ async def chat_endpoint(req: ChatRequest):
 
     # 2. Tag with Operator Trust
     trusted_payload = TrustGuard.wrap_operator(req.message, source="web_cockpit")
+    lower_msg = req.message.lower().strip()
 
-    # 3. Model completion via Gateway
+    # 3. Check for Direct Memory Fact Storage
+    if lower_msg.startswith("remember that ") or lower_msg.startswith("remember: "):
+        fact_text = req.message.split(maxsplit=2)[-1]
+        from core.memory import store_fact
+        fact_key = fact_text[:30].strip()
+        store_fact(key=fact_key, value=fact_text, category="USER_PREFERENCE")
+        return {
+            "response": f"🧠 Stored in persistent memory: \"{fact_text}\". I will recall this to augment future responses.",
+            "trust_level": TrustLevel.DATABASE_STATE.name,
+            "latency_ms": round((time.time() - start_time) * 1000, 2),
+            "payload_id": trusted_payload.payload_id,
+        }
+
+    # 4. Model completion via Gateway (enriched with local memory grounding)
     try:
         raw_response = await llm_gateway.complete(
             prompt=trusted_payload.content,

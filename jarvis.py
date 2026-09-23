@@ -336,6 +336,14 @@ async def get_response(user_text: str, memory: SessionMemory) -> str:
             summary = "\n".join([f"• [{r.get('filename')}] {r.get('content')[:120]}..." for r in results[:3]])
             return f"🔍 Second Brain search results for '{query_str}':\n{summary}"
 
+        # Store Memory Fact
+        if lower.startswith("remember that ") or lower.startswith("remember: "):
+            fact_text = user_text.split(maxsplit=2)[-1]
+            from core.memory import store_fact
+            fact_key = fact_text[:30].strip()
+            store_fact(key=fact_key, value=fact_text, category="USER_PREFERENCE")
+            return f"🧠 Stored in persistent memory: \"{fact_text}\". I will recall this in future conversations."
+
     except Exception as e:
         if "requires cryptographic operator approval" in str(e):
             return f"🛑 Action requires human approval:\n{e}\nUse 'approve <id>' to confirm or 'reject <id>' to cancel."

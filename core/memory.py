@@ -82,10 +82,52 @@ class AgentTask(Base):
     finished_at = Column(DateTime, nullable=True)
 
 
+class MemoryFact(Base):
+    """Persistent user preferences, project facts, and knowledge ledger."""
+    __tablename__ = "memory_facts"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    category = Column(String, default="GENERAL")  # PREFERENCE, PROJECT, IDENTITY, NOTE
+    key = Column(String, index=True, nullable=False)
+    value = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+
 # Relational DB Engine Setup
 engine = create_engine(settings.DATABASE_URL, echo=False)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base.metadata.create_all(bind=engine)
+
+
+def store_fact(key: str, value: str, category: str = "GENERAL") -> MemoryFact:
+    """Store or update a persistent fact in the database."""
+    with get_db_session() as db:
+        existing = db.query(MemoryFact).filter(MemoryFact.key == key).first()
+        if existing:
+            existing.value = value
+            existing.category = category
+            return existing
+        fact = MemoryFact(key=key, value=value, category=category)
+        db.add(fact)
+        return fact
+
+
+def retrieve_relevant_facts(query: str, limit: int = 5) -> List[Dict[str, str]]:
+    """Search for relevant facts from the relational memory ledger."""
+    terms = [t.lower() for t in query.split() if len(t) > 2]
+    if not terms:
+        return []
+    with get_db_session() as db:
+        all_facts = db.query(MemoryFact).all()
+        scored = []
+        for f in all_facts:
+            text = f"{f.key} {f.value} {f.category}".lower()
+            score = sum(text.count(t) for t in terms)
+            if score > 0:
+                scored.append((score, {"key": f.key, "value": f.value, "category": f.category}))
+        scored.sort(key=lambda x: x[0], reverse=True)
+        return [item for _, item in scored[:limit]]
 
 
 class VectorMemory:
