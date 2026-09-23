@@ -33,7 +33,7 @@ class SecurityGuard:
         r"(?i)\bdrop\s+table\b",
         r"(?i)\bselect\s+\*\s+from\b",
         r"(?i)\brm\s+-rf\b",
-        r"(?i)\bformat\s+[a-z]:\b",
+        r"(?i)\bformat\s+[a-z]:(?:\s|$)",
         r"(?i)\bos\.system\b",
         r"(?i)\bsubprocess\b",
         r"(?i)\bexec\(",
