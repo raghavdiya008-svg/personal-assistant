@@ -1,0 +1,48 @@
+model_list:
+  # ── Tier 1: Fast Reflex (Interactive Chat, Formatting, Intent Routing) ──
+  - model_name: reflex
+    litellm_params:
+      model: groq/qwen/qwen3.8-27b
+      api_key: os.environ/GROQ_API_KEY
+      rpm: 30
+      timeout: 5
+
+  - model_name: reflex
+    litellm_params:
+      model: gemini/gemini-2.5-flash
+      api_key: os.environ/GEMINI_API_KEY
+      rpm: 60
+      timeout: 5
+
+  # ── Tier 2: Deep Strategy & Reasoning (Negotiation, Analysis, Code Review) ──
+  - model_name: reasoning
+    litellm_params:
+      model: groq/qwen/qwen3.8-27b
+      api_key: os.environ/GROQ_API_KEY
+      temperature: 0.2
+      timeout: 15
+
+  - model_name: reasoning
+    litellm_params:
+      model: gemini/gemini-3.6-flash
+      api_key: os.environ/GEMINI_API_KEY
+      temperature: 0.2
+      timeout: 15
+
+  # ── Tier 3: Multimodal Vision (Screenshots, PDFs, DOM Analysis) ──
+  - model_name: vision
+    litellm_params:
+      model: gemini/gemini-3.6-flash
+      api_key: os.environ/GEMINI_API_KEY
+      timeout: 10
+
+router_settings:
+  routing_strategy: latency-based-routing
+  set_verbose: false
+  num_retries: 2
+  timeout: 15
+  cooldown_time: 30
+  allowed_fails: 3
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY

@@ -55,6 +55,10 @@ logger = logging.getLogger("JARVIS")
 from core.config import settings
 from core.brain import brain
 from core.security import SecurityGuard
+from core.trust import TrustGuard, TrustLevel
+from core.approvals import approval_engine, SecurityError
+from core.capability_broker import capability_broker
+from core.gateway import llm_gateway
 
 # ── Session memory (in-memory, per-session) ───────────────────────────────────
 class SessionMemory:
@@ -139,17 +143,20 @@ def print_banner():
 def print_help():
     print(f"""
 {C['cyan']}Available commands:{C['reset']}
-  {C['yellow']}help{C['reset']}          - show this message
-  {C['yellow']}clear{C['reset']}         - clear conversation history
-  {C['yellow']}bye / exit{C['reset']}    - shut down JARVIS
-  {C['yellow']}status{C['reset']}        - show session stats and model info
+  {C['yellow']}help{C['reset']}               - show this message
+  {C['yellow']}clear{C['reset']}              - clear conversation history
+  {C['yellow']}approvals{C['reset']}          - list pending cryptographic approval tickets
+  {C['yellow']}approve <id>{C['reset']}       - cryptographically sign and approve a ticket
+  {C['yellow']}reject <id>{C['reset']}        - reject an approval ticket
+  {C['yellow']}status{C['reset']}             - show session stats and capability telemetry
+  {C['yellow']}bye / exit{C['reset']}         - shut down JARVIS
 
-{C['cyan']}What JARVIS can do:{C['reset']}
-  * Answer any question or have a conversation
-  * Help with tasks, planning, research, writing
-  * Schedule awareness (ask about meetings/calendar)
+{C['cyan']}What JARVIS v2 can do:{C['reset']}
+  * Answer any question or have a conversation with rolling context
+  * Governance: Capability Broker enforcement for all system actions
+  * Cryptographic HITL approval gate for sensitive operations
   * Process voice input and speak back (--voice mode)
-  * Remember the full conversation in this session
+  * Seamless model routing across LiteLLM Gateway & local fallback
 """)
 
 
@@ -158,14 +165,18 @@ def print_status(memory: SessionMemory, voice_mode: bool, tts_enabled: bool):
     mins, secs = divmod(int(uptime.total_seconds()), 60)
     mode_str = "[Voice]" if voice_mode else "[Text]"
     tts_str  = " (TTS on)" if tts_enabled and voice_mode else ""
+    pending_count = len(approval_engine.get_pending_tickets())
+    cap_count = len(capability_broker._capabilities)
     print(f"""
 {C['cyan']}Session Status:{C['reset']}
-  Turns this session : {memory.turn_count}
-  Uptime             : {mins}m {secs}s
-  Mode               : {mode_str}{tts_str}
-  Primary model      : {settings.FAST_MODEL}  (Groq)
-  Fallback model     : {settings.MULTIMODAL_MODEL}  (Gemini)
-  Security guards    : [ACTIVE]
+  Turns this session     : {memory.turn_count}
+  Uptime                 : {mins}m {secs}s
+  Mode                   : {mode_str}{tts_str}
+  Primary model          : {settings.FAST_MODEL}  (Groq)
+  Fallback model         : {settings.MULTIMODAL_MODEL}  (Gemini)
+  Capabilities Active    : {cap_count} on Capability Bus
+  Pending Approvals      : {pending_count} ticket(s)
+  Security Engine        : [ACTIVE - Zero Trust Policy Broker]
 """)
 
 
@@ -306,8 +317,8 @@ async def get_response(user_text: str, memory: SessionMemory) -> str:
     else:
         full_prompt = user_text
 
-    # 4. Brain dispatch (auto-routes FAST/DEEP)
-    response = await brain.auto(full_prompt, system_prompt=SYSTEM_PROMPT)
+    # 4. Gateway dispatch (deterministic tier routing & LiteLLM failover)
+    response = await llm_gateway.complete(full_prompt, tier="reflex", system_prompt=SYSTEM_PROMPT)
 
     # 5. Outbound sanitization — never leak secrets
     response = SecurityGuard.sanitize_outbound_text(response)
@@ -341,6 +352,35 @@ async def text_loop(memory: SessionMemory):
 
         if user_input.lower() == "status":
             print_status(memory, False, False)
+            continue
+
+        if user_input.lower() == "approvals":
+            pending = approval_engine.get_pending_tickets()
+            if not pending:
+                print(f"  {C['green']}No pending approval tickets.{C['reset']}")
+            else:
+                print(f"\n{C['yellow']}Pending Cryptographic Approval Tickets ({len(pending)}):{C['reset']}")
+                for tid, ticket in pending.items():
+                    print(f"  * {C['cyan']}[{tid}]{C['reset']} Action: {ticket['action']} | Risk: {ticket['risk_level']} | Hash: {ticket['params_hash'][:12]}...")
+                    print(f"    Params: {ticket['parameters']}")
+            continue
+
+        if user_input.lower().startswith("approve "):
+            ticket_id = user_input.split(maxsplit=1)[1].strip()
+            try:
+                ticket = approval_engine.approve_ticket(ticket_id, operator_id="terminal_operator")
+                print(f"  {C['green']}Approved and cryptographically signed ticket [{ticket_id}].{C['reset']}")
+            except Exception as e:
+                print(f"  {C['red']}Approval error: {e}{C['reset']}")
+            continue
+
+        if user_input.lower().startswith("reject "):
+            ticket_id = user_input.split(maxsplit=1)[1].strip()
+            try:
+                ticket = approval_engine.reject_ticket(ticket_id, operator_id="terminal_operator")
+                print(f"  {C['yellow']}Rejected ticket [{ticket_id}].{C['reset']}")
+            except Exception as e:
+                print(f"  {C['red']}Rejection error: {e}{C['reset']}")
             continue
 
         # Store user turn
