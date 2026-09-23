@@ -143,6 +143,40 @@ async def reject_ticket(ticket_id: str, req: ApprovalActionRequest):
         raise HTTPException(status_code=400, detail=str(e))
 
 
+class CapabilityInvokeRequest(BaseModel):
+    parameters: Dict[str, Any] = {}
+    approval_ticket_id: Optional[str] = None
+    agent_id: str = "cockpit_operator"
+
+
+@app.post("/api/capabilities/{capability_name}/invoke")
+async def invoke_capability_endpoint(capability_name: str, req: CapabilityInvokeRequest):
+    """Directly execute a registered capability through the Capability Broker."""
+    try:
+        result = await capability_broker.invoke(
+            agent_id=req.agent_id,
+            capability_name=capability_name,
+            parameters=req.parameters,
+            approval_ticket_id=req.approval_ticket_id,
+        )
+        return {
+            "status": "SUCCESS",
+            "capability": capability_name,
+            "result": result.content if hasattr(result, "content") else result,
+            "trust_level": getattr(result, "trust_level", None).name if getattr(result, "trust_level", None) else "SYSTEM",
+        }
+    except ApprovalRequiredError as e:
+        return {
+            "status": "APPROVAL_REQUIRED",
+            "capability": capability_name,
+            "ticket_id": e.ticket_id,
+            "parameters": e.parameters,
+            "message": str(e),
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @app.get("/api/capabilities")
 async def list_capabilities():
     """List registered capabilities and risk boundary classifications."""
