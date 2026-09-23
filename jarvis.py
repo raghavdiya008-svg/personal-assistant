@@ -59,6 +59,9 @@ from core.trust import TrustGuard, TrustLevel
 from core.approvals import approval_engine, SecurityError
 from core.capability_broker import capability_broker
 from core.gateway import llm_gateway
+import core.desktop
+import core.second_brain
+import core.telephony
 
 # ── Session memory (in-memory, per-session) ───────────────────────────────────
 class SessionMemory:

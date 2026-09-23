@@ -26,6 +26,11 @@ from core.gateway import llm_gateway
 from core.security import SecurityGuard
 from core.config import settings
 
+# Ingest all capability modules to register with CapabilityBroker
+import core.desktop
+import core.second_brain
+import core.telephony
+
 app = FastAPI(title="JARVIS v2 Sovereign Cockpit API", version="2.0.0")
 
 # Enable CORS for local cockpit
