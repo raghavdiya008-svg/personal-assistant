@@ -187,13 +187,30 @@ class CapabilityBroker:
         """
         import urllib.request
         from urllib.parse import urlparse
+        import ipaddress
+        import socket
 
         parsed = urlparse(url)
         hostname = (parsed.hostname or "").lower()
 
-        # Block localhost / private RFC 1918 internal IPs from SSRF
-        if hostname in ("localhost", "127.0.0.1", "0.0.0.0") or hostname.startswith("192.168.") or hostname.startswith("10."):
+        # Check explicit hostname patterns
+        if hostname in ("localhost", "0.0.0.0"):
             raise PermissionError(f"SSRF Protection: Access to private/internal network blocked for: {url}")
+
+        # Check IP address / resolved IP for private, loopback, link-local ranges
+        try:
+            ip_obj = ipaddress.ip_address(hostname)
+            if ip_obj.is_private or ip_obj.is_loopback or ip_obj.is_link_local or ip_obj.is_reserved:
+                raise PermissionError(f"SSRF Protection: Access to private/internal IP blocked for: {url}")
+        except ValueError:
+            # Hostname is a domain name - resolve it to check against private network ranges
+            try:
+                resolved_ip_str = socket.gethostbyname(hostname)
+                resolved_ip = ipaddress.ip_address(resolved_ip_str)
+                if resolved_ip.is_private or resolved_ip.is_loopback or resolved_ip.is_link_local or resolved_ip.is_reserved:
+                    raise PermissionError(f"SSRF Protection: Domain {hostname} resolves to private IP {resolved_ip_str}")
+            except (socket.gaierror, socket.herror):
+                pass  # Let urlopen handle unreachable domain names
 
         req = urllib.request.Request(
             url,
@@ -319,9 +336,10 @@ class CapabilityBroker:
             )
 
         # 4. Capability Execution
+        import asyncio
         logger.info(f"⚡ [CAPABILITY EXECUTED] Agent '{agent_id}' -> '{capability_name}'")
         if inspect.iscoroutinefunction(cap.handler):
-            return await cap.handler(**parameters)
+            return await asyncio.wait_for(cap.handler(**parameters), timeout=30.0)
         return cap.handler(**parameters)
 
 

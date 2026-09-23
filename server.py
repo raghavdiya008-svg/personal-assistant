@@ -37,7 +37,7 @@ app = FastAPI(title="JARVIS v2 Sovereign Cockpit API", version="2.0.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -51,6 +51,7 @@ UI_DIR = settings.BASE_DIR / "ui"
 class ChatRequest(BaseModel):
     message: str
     agent_id: str = "operator"
+    tier: str = "auto"
     approval_ticket_id: Optional[str] = None
 
 
@@ -93,7 +94,7 @@ async def chat_endpoint(req: ChatRequest):
     try:
         raw_response = await llm_gateway.complete(
             prompt=trusted_payload.content,
-            tier="reflex",
+            tier=req.tier,
         )
         # 4. Outbound secret scrub
         sanitized = SecurityGuard.sanitize_outbound_text(raw_response)
@@ -111,9 +112,10 @@ async def chat_endpoint(req: ChatRequest):
 @app.get("/api/approvals")
 async def get_approvals():
     """List all pending cryptographic approval tickets."""
+    tickets = approval_engine.get_pending_tickets()
     return {
-        "pending_tickets": approval_engine.get_pending_tickets(),
-        "count": len(approval_engine.get_pending_tickets()),
+        "pending_tickets": tickets,
+        "count": len(tickets),
     }
 
 

@@ -42,58 +42,63 @@ class LocalSecondBrain:
     def _save_index(self):
         self.index_file.write_text(json.dumps(self._index, indent=2), encoding="utf-8")
 
-    def index_document(self, file_path: str, tags: Optional[List[str]] = None) -> TrustedPayload:
+    def index_document(self, file_path: Optional[str] = None, path: Optional[str] = None, tags: Optional[List[str]] = None, **kwargs) -> TrustedPayload:
         """
         Ingest a personal document (Markdown, Text, JSON, PDF) into the local index.
         """
-        path = Path(file_path).resolve()
-        if not path.exists():
-            raise FileNotFoundError(f"Document not found: {file_path}")
+        target = file_path or path or kwargs.get("filepath") or kwargs.get("doc_path")
+        if not target:
+            raise ValueError("Parameter 'file_path' or 'path' is required.")
+
+        path_obj = Path(target).resolve()
+        if not path_obj.exists():
+            raise FileNotFoundError(f"Document not found: {target}")
 
         # Extract text content safely
         content = ""
-        if path.suffix.lower() in (".md", ".txt", ".json", ".csv"):
-            content = path.read_text(encoding="utf-8", errors="replace")
-        elif path.suffix.lower() == ".pdf":
+        if path_obj.suffix.lower() in (".md", ".txt", ".json", ".csv"):
+            content = path_obj.read_text(encoding="utf-8", errors="replace")
+        elif path_obj.suffix.lower() == ".pdf":
             try:
                 import pypdf
-                reader = pypdf.PdfReader(str(path))
+                reader = pypdf.PdfReader(str(path_obj))
                 content = "\n".join([page.extract_text() or "" for page in reader.pages])
             except ImportError:
-                content = f"[PDF file: {path.name} - text extractor pypdf not installed]"
+                content = f"[PDF file: {path_obj.name} - text extractor pypdf not installed]"
         else:
-            content = path.read_text(encoding="utf-8", errors="replace")
+            content = path_obj.read_text(encoding="utf-8", errors="replace")
 
         # Chunk content into paragraphs
         paragraphs = [p.strip() for p in content.split("\n\n") if len(p.strip()) > 30]
         doc_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()
 
         # Remove previous chunks for this document
-        self._index = [item for item in self._index if item.get("source") != str(path)]
+        self._index = [item for item in self._index if item.get("source") != str(path_obj)]
 
         for idx, chunk in enumerate(paragraphs):
             self._index.append({
-                "source": str(path),
-                "filename": path.name,
+                "source": str(path_obj),
+                "filename": path_obj.name,
                 "chunk_id": f"{doc_hash[:8]}_{idx}",
                 "content": chunk,
                 "tags": tags or [],
             })
 
         self._save_index()
-        logger.info(f"🧠 [SECOND BRAIN] Indexed {len(paragraphs)} chunks from: {path.name}")
+        logger.info(f"🧠 [SECOND BRAIN] Indexed {len(paragraphs)} chunks from: {path_obj.name}")
         return TrustGuard.wrap_system({
-            "source": str(path),
+            "source": str(path_obj),
             "chunks_indexed": len(paragraphs),
             "status": "INDEXED",
         }, source="second_brain.index")
 
-    def query(self, search_text: str, top_k: int = 5) -> TrustedPayload:
+    def query(self, search_text: Optional[str] = None, query: Optional[str] = None, text: Optional[str] = None, top_k: int = 5, **kwargs) -> TrustedPayload:
         """
         Search the private local second brain without sending personal data to the cloud.
-        Uses local TF-IDF / term-frequency keyword matching across chunks.
+        Uses local term-frequency keyword matching across chunks.
         """
-        terms = [t.lower() for t in search_text.split() if len(t) > 2]
+        q = search_text or query or text or kwargs.get("q", "")
+        terms = [t.lower() for t in q.split() if len(t) > 2]
         scored_results = []
 
         for item in self._index:
@@ -106,9 +111,9 @@ class LocalSecondBrain:
         scored_results.sort(key=lambda x: x[0], reverse=True)
         top_matches = [item for score, item in scored_results[:top_k]]
 
-        logger.info(f"🔍 [SECOND BRAIN QUERY] Found {len(top_matches)} matches for '{search_text}'")
+        logger.info(f"🔍 [SECOND BRAIN QUERY] Found {len(top_matches)} matches for '{q}'")
         return TrustGuard.wrap_system({
-            "query": search_text,
+            "query": q,
             "results": top_matches,
             "count": len(top_matches),
         }, source="second_brain.search")

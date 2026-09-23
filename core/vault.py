@@ -27,8 +27,16 @@ class ZeroTrustVault:
     """
 
     def __init__(self, master_key: Optional[str] = None):
-        raw_key = master_key or os.getenv("VAULT_MASTER_KEY", "jarvis_v2_vault_master_seed_2026")
-        self._key = hashlib.sha256(raw_key.encode("utf-8")).digest()
+        raw_key = master_key or getattr(settings, "VAULT_MASTER_KEY", "jarvis_v2_vault_master_seed_2026")
+        self._raw_seed = hashlib.sha256(raw_key.encode("utf-8")).digest()
+        self._fernet = None
+        try:
+            from cryptography.fernet import Fernet
+            fernet_key = base64.urlsafe_b64encode(self._raw_seed)
+            self._fernet = Fernet(fernet_key)
+        except ImportError:
+            self._fernet = None
+
         self._secrets: Dict[str, bytes] = {}
         self._capability_permissions: Dict[str, Set[str]] = {
             # Capability -> Set of secret keys allowed to be injected
@@ -39,10 +47,18 @@ class ZeroTrustVault:
         }
         self._load_env_secrets()
 
-    def _xor_cipher(self, data: bytes) -> bytes:
-        """Lightweight zero-dependency symmetric cipher stream."""
-        key_len = len(self._key)
-        return bytes([b ^ self._key[i % key_len] for i, b in enumerate(data)])
+    def _encrypt(self, data: bytes) -> bytes:
+        if self._fernet:
+            return self._fernet.encrypt(data)
+        # Fallback cipher stream
+        key_len = len(self._raw_seed)
+        return bytes([b ^ self._raw_seed[i % key_len] for i, b in enumerate(data)])
+
+    def _decrypt(self, data: bytes) -> bytes:
+        if self._fernet:
+            return self._fernet.decrypt(data)
+        key_len = len(self._raw_seed)
+        return bytes([b ^ self._raw_seed[i % key_len] for i, b in enumerate(data)])
 
     def _load_env_secrets(self):
         """Ingest known system credentials into the vault and scrub from easy access."""
@@ -58,7 +74,7 @@ class ZeroTrustVault:
 
     def store_secret(self, key: str, value: str):
         """Encrypt and store a secret."""
-        encrypted = self._xor_cipher(value.encode("utf-8"))
+        encrypted = self._encrypt(value.encode("utf-8"))
         self._secrets[key] = encrypted
         logger.debug(f"Stored encrypted secret: {key}")
 
@@ -81,7 +97,7 @@ class ZeroTrustVault:
         if not encrypted:
             return None
 
-        decrypted = self._xor_cipher(encrypted).decode("utf-8")
+        decrypted = self._decrypt(encrypted).decode("utf-8")
         logger.info(f"🔐 [SECRET INJECTED] '{secret_key}' injected for capability '{capability_name}'.")
         return decrypted
 
@@ -89,9 +105,12 @@ class ZeroTrustVault:
         """Utility to redact any stored secret from logs or outbound messages."""
         masked = text
         for key, enc in self._secrets.items():
-            plain = self._xor_cipher(enc).decode("utf-8")
-            if len(plain) > 6 and plain in masked:
-                masked = masked.replace(plain, f"[VAULT_REDACTED_{key}]")
+            try:
+                plain = self._decrypt(enc).decode("utf-8")
+                if len(plain) > 6 and plain in masked:
+                    masked = masked.replace(plain, f"[VAULT_REDACTED_{key}]")
+            except Exception:
+                pass
         return masked
 
 

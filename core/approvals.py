@@ -78,6 +78,55 @@ class CryptographicApprovalEngine:
         self._secret_key = raw_key.encode("utf-8")
         self._tickets: Dict[str, ApprovalTicket] = {}
         self._used_nonces: set = set()
+        self._storage_path = settings.DATA_DIR / "approval_tickets.json"
+        self._load_persisted_tickets()
+
+    def _load_persisted_tickets(self):
+        """Restore unexpired pending tickets from disk on startup."""
+        if not self._storage_path.exists():
+            return
+        try:
+            data = json.loads(self._storage_path.read_text(encoding="utf-8"))
+            now = time.time()
+            for tid, t_dict in data.items():
+                if t_dict.get("status") == "PENDING" and t_dict.get("expires_at", 0) > now:
+                    ticket = ApprovalTicket(
+                        ticket_id=t_dict["ticket_id"],
+                        action=t_dict["action"],
+                        parameters=t_dict["parameters"],
+                        params_hash=t_dict["params_hash"],
+                        nonce=t_dict["nonce"],
+                        requested_by=t_dict["requested_by"],
+                        risk_level=t_dict.get("risk_level", "HIGH"),
+                        ttl_seconds=int(t_dict["expires_at"] - t_dict["issued_at"]),
+                    )
+                    ticket.issued_at = t_dict["issued_at"]
+                    ticket.expires_at = t_dict["expires_at"]
+                    ticket.status = t_dict["status"]
+                    ticket.signature = t_dict.get("signature")
+                    ticket.decided_by = t_dict.get("decided_by")
+                    self._tickets[tid] = ticket
+            logger.info(f"Loaded {len(self._tickets)} active approval ticket(s) from persistence.")
+        except Exception as e:
+            logger.warning(f"Could not load persisted approval tickets: {e}")
+
+    def _persist_tickets(self):
+        """Save ticket state to disk."""
+        try:
+            data = {tid: t.to_dict() for tid, t in self._tickets.items()}
+            self._storage_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+        except Exception as e:
+            logger.warning(f"Failed to persist approval tickets: {e}")
+
+    def _purge_stale_tickets(self):
+        """Clean up expired tickets to prevent memory leaks."""
+        now = time.time()
+        expired_ids = [
+            tid for tid, t in self._tickets.items()
+            if (t.is_expired() and t.status == "PENDING") or (t.status in ("EXECUTED", "REJECTED") and now - t.expires_at > 3600)
+        ]
+        for tid in expired_ids:
+            del self._tickets[tid]
 
     @staticmethod
     def compute_params_hash(parameters: Dict[str, Any]) -> str:
@@ -94,6 +143,7 @@ class CryptographicApprovalEngine:
         ttl_seconds: int = 600,
     ) -> ApprovalTicket:
         """Create a new pending approval ticket for a sensitive capability."""
+        self._purge_stale_tickets()
         ticket_id = f"appr_{uuid.uuid4().hex[:12]}"
         nonce = f"nonce_{uuid.uuid4().hex[:16]}"
         params_hash = self.compute_params_hash(parameters)
@@ -110,6 +160,7 @@ class CryptographicApprovalEngine:
         )
 
         self._tickets[ticket_id] = ticket
+        self._persist_tickets()
         logger.info(
             f"📋 [APPROVAL CREATED] Ticket '{ticket_id}' for action '{action}' (hash: {params_hash[:10]}...)"
         )
@@ -130,6 +181,7 @@ class CryptographicApprovalEngine:
 
         if ticket.is_expired():
             ticket.status = "EXPIRED"
+            self._persist_tickets()
             raise ValueError(f"Approval ticket '{ticket_id}' has expired.")
 
         if ticket.status != "PENDING":
@@ -138,6 +190,7 @@ class CryptographicApprovalEngine:
         ticket.status = "APPROVED"
         ticket.decided_by = operator_id
         ticket.signature = self._generate_signature(ticket, "APPROVED")
+        self._persist_tickets()
         logger.info(f"✅ [APPROVAL GRANTED] Ticket '{ticket_id}' signed by {operator_id}")
         return ticket
 
@@ -151,6 +204,7 @@ class CryptographicApprovalEngine:
 
         ticket.status = "REJECTED"
         ticket.decided_by = operator_id
+        self._persist_tickets()
         logger.info(f"❌ [APPROVAL REJECTED] Ticket '{ticket_id}' rejected by {operator_id}")
         return ticket
 
@@ -209,10 +263,12 @@ class CryptographicApprovalEngine:
         self._used_nonces.add(ticket.nonce)
         ticket.status = "EXECUTED"
         ticket.executed_at = time.time()
+        self._persist_tickets()
         logger.info(f"🛡️ [APPROVAL CONSUMED] Ticket '{ticket_id}' validated and consumed.")
         return True
 
     def get_pending_tickets(self) -> Dict[str, Dict[str, Any]]:
+        self._purge_stale_tickets()
         return {
             tid: t.to_dict()
             for tid, t in self._tickets.items()

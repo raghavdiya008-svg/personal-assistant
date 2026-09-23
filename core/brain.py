@@ -104,10 +104,11 @@ class CognitiveBrain:
 
     async def reflex(self, prompt: str, system_prompt: Optional[str] = None) -> str:
         """
-        Fast Reflex: Uses Groq 8B for conversational speed.
+        Fast Reflex: Uses Groq fast model for conversational speed.
         Realistic round-trip target: 250–500ms on free tier.
-        Fallback chain: Groq 8B -> Ollama local -> Gemini Flash.
+        Fallback chain: Groq -> Ollama local -> Gemini Flash.
         """
+        import asyncio
         default_sys = "You are JARVIS, an AI executive assistant. Be concise, clear, and professional."
         sys_content = system_prompt or default_sys
 
@@ -117,12 +118,14 @@ class CognitiveBrain:
                     {"role": "system", "content": sys_content},
                     {"role": "user", "content": prompt},
                 ]
-                response = self._groq_client.chat.completions.create(
-                    model=settings.FAST_MODEL,
-                    messages=messages,
-                    temperature=0.6,
-                    max_tokens=500,
-                )
+                def _call_groq():
+                    return self._groq_client.chat.completions.create(
+                        model=settings.FAST_MODEL,
+                        messages=messages,
+                        temperature=0.6,
+                        max_tokens=500,
+                    )
+                response = await asyncio.to_thread(_call_groq)
                 return response.choices[0].message.content or ""
             except Exception as e:
                 logger.warning(f"Groq Reflex failed, trying Ollama: {e}")
@@ -143,6 +146,7 @@ class CognitiveBrain:
         Deep Reasoning: High intelligence for strategy, negotiations, and code.
         Fallback chain: Groq 70B -> Ollama local -> Gemini Flash.
         """
+        import asyncio
         default_sys = (
             "You are JARVIS's Chief Strategy & Reasoning Core. "
             "Think deeply, be rigorous, structured, and prioritize high-value business outcomes."
@@ -164,7 +168,9 @@ class CognitiveBrain:
                 if json_mode:
                     kwargs["response_format"] = {"type": "json_object"}
 
-                response = self._groq_client.chat.completions.create(**kwargs)
+                def _call_groq():
+                    return self._groq_client.chat.completions.create(**kwargs)
+                response = await asyncio.to_thread(_call_groq)
                 return response.choices[0].message.content or ""
             except Exception as e:
                 logger.warning(f"Groq Reason failed, trying Ollama: {e}")
@@ -202,17 +208,20 @@ class CognitiveBrain:
         """
         Multimodal Eyes: Analyze screens, documents, slides, and webcam frames.
         """
+        import asyncio
         if self._gemini_client:
             try:
                 from google.genai import types
 
-                response = self._gemini_client.models.generate_content(
-                    model=settings.MULTIMODAL_MODEL,
-                    contents=[
-                        types.Part.from_bytes(data=image_bytes, mime_type=mime_type),
-                        prompt,
-                    ],
-                )
+                def _call_gemini():
+                    return self._gemini_client.models.generate_content(
+                        model=settings.MULTIMODAL_MODEL,
+                        contents=[
+                            types.Part.from_bytes(data=image_bytes, mime_type=mime_type),
+                            prompt,
+                        ],
+                    )
+                response = await asyncio.to_thread(_call_gemini)
                 return response.text or ""
             except Exception as e:
                 logger.error(f"Gemini Vision call failed: {e}")
@@ -222,17 +231,19 @@ class CognitiveBrain:
 
     async def _gemini_fallback(self, prompt: str, system_prompt: str) -> str:
         """Fallback executor using Google Gemini API."""
+        import asyncio
         if self._gemini_client:
             try:
                 full_prompt = f"Instructions: {system_prompt}\n\nTask: {prompt}" if system_prompt else prompt
-                response = self._gemini_client.models.generate_content(
-                    model=settings.MULTIMODAL_MODEL,
-                    contents=full_prompt,
-                )
+                def _call_gemini():
+                    return self._gemini_client.models.generate_content(
+                        model=settings.MULTIMODAL_MODEL,
+                        contents=full_prompt,
+                    )
+                response = await asyncio.to_thread(_call_gemini)
                 return response.text or ""
             except Exception as e:
                 logger.error(f"Gemini fallback also failed: {e}")
-
 
         # Mock fallback for test/offline environments
         return f"[JARVIS Offline Mock Response to: '{prompt[:50]}...']"

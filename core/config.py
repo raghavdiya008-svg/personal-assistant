@@ -40,9 +40,14 @@ class Config:
     HUGGINGFACE_API_KEY: str = os.getenv("HUGGINGFACE_API_KEY", "")
 
     # Verified Working Frontier Models
-    FAST_MODEL: str = "qwen/qwen3.8-27b"              # Groq high-speed (27B params, 500+ tok/s)
-    REASONING_MODEL: str = "qwen/qwen3.8-27b"         # Groq deep reasoning & strategy
-    MULTIMODAL_MODEL: str = "gemini-3.6-flash"        # Google AI Studio frontier multimodal/vision (1M context)
+    FAST_MODEL: str = os.getenv("FAST_MODEL", "qwen/qwen3.8-27b")              # Groq high-speed (27B params, 500+ tok/s)
+    REASONING_MODEL: str = os.getenv("REASONING_MODEL", "llama-3.3-70b-versatile")  # Groq 70B deep reasoning & strategy
+    MULTIMODAL_MODEL: str = os.getenv("MULTIMODAL_MODEL", "gemini-2.5-flash")      # Google AI Studio multimodal
+
+    # Gateway & Security Keys
+    APPROVAL_SECRET_KEY: str = os.getenv("APPROVAL_SECRET_KEY", "jarvis_v2_sovereign_secret_key")
+    LITELLM_MASTER_KEY: str = os.getenv("LITELLM_MASTER_KEY", "sk-jarvis-gateway-token")
+    VAULT_MASTER_KEY: str = os.getenv("VAULT_MASTER_KEY", "jarvis_v2_vault_master_seed_2026")
 
     # Telegram Cockpit
     TELEGRAM_BOT_TOKEN: str = os.getenv("TELEGRAM_BOT_TOKEN", "")

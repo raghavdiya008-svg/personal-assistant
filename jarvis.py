@@ -291,7 +291,7 @@ async def transcribe_audio(audio_bytes: bytes) -> str:
 
 # ── Core chat logic ────────────────────────────────────────────────────────────
 async def get_response(user_text: str, memory: SessionMemory) -> str:
-    """Security check → intent detect → brain dispatch → return response."""
+    """Security check → intent detect → capability dispatch / brain routing → return response."""
 
     # 1. Security inspection
     is_safe, threat_type, deflection = SecurityGuard.inspect_client_input(user_text)
@@ -309,7 +309,39 @@ async def get_response(user_text: str, memory: SessionMemory) -> str:
         memory.clear()
         return "🧹 Conversation cleared. Fresh start!"
 
-    # 3. Build contextual prompt
+    lower = user_text.lower().strip()
+
+    # 3. Direct Capability Broker Dispatches
+    try:
+        # Screenshot capability
+        if any(kw in lower for kw in ["take screenshot", "take a screenshot", "capture screen", "capture my screen"]):
+            res = await capability_broker.invoke(
+                agent_id="operator",
+                capability_name="desktop.screenshot",
+                parameters={},
+            )
+            return f"📸 Screenshot captured successfully: {res.content.get('path', 'screenshot.png')}"
+
+        # Second Brain Search
+        if any(lower.startswith(prefix) for prefix in ["search notes ", "search doc ", "search second brain ", "find note "]):
+            query_str = user_text.split(maxsplit=2)[-1]
+            res = await capability_broker.invoke(
+                agent_id="operator",
+                capability_name="second_brain.search",
+                parameters={"search_text": query_str},
+            )
+            results = res.content.get("results", [])
+            if not results:
+                return f"🔍 No matching notes found in Second Brain for '{query_str}'."
+            summary = "\n".join([f"• [{r.get('filename')}] {r.get('content')[:120]}..." for r in results[:3]])
+            return f"🔍 Second Brain search results for '{query_str}':\n{summary}"
+
+    except Exception as e:
+        if "requires cryptographic operator approval" in str(e):
+            return f"🛑 Action requires human approval:\n{e}\nUse 'approve <id>' to confirm or 'reject <id>' to cancel."
+        logger.warning(f"Capability broker execution notice: {e}")
+
+    # 4. Build contextual prompt
     history_ctx = memory.get_context()
     if history_ctx:
         full_prompt = (
@@ -320,10 +352,10 @@ async def get_response(user_text: str, memory: SessionMemory) -> str:
     else:
         full_prompt = user_text
 
-    # 4. Gateway dispatch (deterministic tier routing & LiteLLM failover)
-    response = await llm_gateway.complete(full_prompt, tier="reflex", system_prompt=SYSTEM_PROMPT)
+    # 5. Gateway dispatch (dynamic tier routing & LiteLLM / FreeLLMAPI failover)
+    response = await llm_gateway.complete(full_prompt, tier="auto", system_prompt=SYSTEM_PROMPT)
 
-    # 5. Outbound sanitization — never leak secrets
+    # 6. Outbound sanitization — never leak secrets
     response = SecurityGuard.sanitize_outbound_text(response)
 
     return response.strip() if response else "I'm thinking… but couldn't generate a response. Please try again."
